@@ -19,7 +19,9 @@ Small, contract-preserving changes are welcome.
    python -m compileall -q src tests scripts
    ```
 
-6. Inspect the staged file list and Git author email before pushing.
+6. Inspect the staged file list and Git author email before pushing. The public
+   gate also scans reachable commit and annotated-tag messages, but contributors
+   remain responsible for keeping private data out before it reaches Git.
 
 ## Design rules
 

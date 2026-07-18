@@ -22,7 +22,10 @@ production accounts, content, code, and history remain private.
 - [ ] Add randomized transition and recovery-model tests without production
   fixtures.
 - [ ] Add measured loudness checks behind a versioned profile.
-- [ ] Publish signed release artifacts and a reproducible release checklist.
+- [x] Add a fail-closed attested-artifact workflow and hash-locked release
+  checklist for future tags.
+- [ ] Publish the first new release through that workflow; `v0.1.0` intentionally
+  remains the pre-attestation source release.
 - [ ] Evaluate Windows abstractions without weakening POSIX guarantees.
 
 ## v0.3 — adapters after evidence
