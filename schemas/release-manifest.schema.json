@@ -1,0 +1,199 @@
+{
+  "$defs": {
+    "probe": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_seconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "format_name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "streams": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "codec_name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "codec_type": {
+                "enum": [
+                  "audio",
+                  "video"
+                ]
+              },
+              "height": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "pix_fmt": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "sample_rate": {
+                "pattern": "^[0-9]+$",
+                "type": "string"
+              },
+              "width": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "codec_type",
+              "codec_name"
+            ],
+            "type": "object"
+          },
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "duration_seconds",
+        "format_name",
+        "streams"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/demidgost-sys/verified-video-pipeline/raw/main/schemas/release-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approved_plan": {
+      "additionalProperties": false,
+      "properties": {
+        "gate": {
+          "const": "human-approved"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "sha256",
+        "gate"
+      ],
+      "type": "object"
+    },
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "probe": {
+          "$ref": "#/$defs/probe"
+        },
+        "profile": {
+          "const": "h264-aac-web"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sha256",
+        "size",
+        "profile",
+        "probe"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "public_repository_fixture_policy": {
+          "const": "synthetic-only"
+        },
+        "tool": {
+          "const": "verified-video-pipeline"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "version",
+        "public_repository_fixture_policy"
+      ],
+      "type": "object"
+    },
+    "qa": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "checks": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "probe": {
+          "$ref": "#/$defs/probe"
+        },
+        "status": {
+          "const": "PASS"
+        }
+      },
+      "required": [
+        "status",
+        "checked_at",
+        "checks",
+        "probe"
+      ],
+      "type": "object"
+    },
+    "release_id": {
+      "pattern": "^sha256-[0-9a-f]{16}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "release_id",
+    "source",
+    "approved_plan",
+    "artifact",
+    "qa",
+    "provenance"
+  ],
+  "title": "Verified Video Pipeline release manifest",
+  "type": "object"
+}

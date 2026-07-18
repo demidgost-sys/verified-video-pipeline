@@ -1,0 +1,8 @@
+{
+  "profile": "h264-aac-web",
+  "schema_version": 1,
+  "trim": {
+    "end_seconds": 2.75,
+    "start_seconds": 0.25
+  }
+}

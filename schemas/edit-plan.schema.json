@@ -1,0 +1,39 @@
+{
+  "$id": "https://github.com/demidgost-sys/verified-video-pipeline/raw/main/schemas/edit-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structural contract only. Runtime validation additionally requires end_seconds > start_seconds, finite numbers, and end_seconds within the registered source duration.",
+  "properties": {
+    "profile": {
+      "const": "h264-aac-web"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "trim": {
+      "additionalProperties": false,
+      "properties": {
+        "end_seconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "start_seconds": {
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "start_seconds",
+        "end_seconds"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "trim"
+  ],
+  "title": "Verified Video Pipeline edit plan",
+  "type": "object"
+}

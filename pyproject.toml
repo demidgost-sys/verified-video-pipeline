@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "verified-video-pipeline"
+version = "0.1.0"
+description = "Fail-closed release assurance for human-approved video artifacts"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Demid Valiullin" },
+]
+keywords = [
+  "ffmpeg",
+  "media-pipeline",
+  "provenance",
+  "reliability",
+  "video",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Multimedia :: Video :: Conversion",
+  "Topic :: System :: Archiving",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "jsonschema==4.26.0",
+  "ruff==0.14.11",
+]
+
+[project.scripts]
+vvp = "verified_video_pipeline.cli:main"
+
+[project.urls]
+Repository = "https://github.com/demidgost-sys/verified-video-pipeline"
+Issues = "https://github.com/demidgost-sys/verified-video-pipeline/issues"
+Documentation = "https://github.com/demidgost-sys/verified-video-pipeline/tree/main/docs"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

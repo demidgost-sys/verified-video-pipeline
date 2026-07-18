@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+.DS_Store
+
+# Demo and media output must never enter Git.
+demo-run/
+*.mp4
+*.mkv
+*.mov
+*.wav
+*.srt
+*.fcpxml
+
+# Local pipeline state and credentials are never source material.
+project.json
+journal.json
+.vvp.lock
+approved-plan.json
+build-receipt.json
+demo-plan.json
+release-manifest.json
+.master.staged.mp4
+*.token.json
+client_secret*.json
+.envrc
+.env
+.env.*
