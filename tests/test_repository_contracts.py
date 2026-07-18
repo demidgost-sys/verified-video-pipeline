@@ -431,6 +431,8 @@ class RepositoryContractTests(unittest.TestCase):
         checkout_step_end = workflow.index("\n      - name:", checkout_position)
         checkout_step = workflow[checkout_position:checkout_step_end]
         self.assertRegex(checkout_step, r"(?m)^\s+fetch-depth:\s*0\s*$")
+        self.assertRegex(checkout_step, r"(?m)^\s+fetch-tags:\s*true\s*$")
+        self.assertRegex(checkout_step, r"(?m)^\s+persist-credentials:\s*false\s*$")
 
     def test_relative_markdown_links_resolve(self) -> None:
         link = re.compile(r"\[[^\]]*\]\(([^)]+)\)")

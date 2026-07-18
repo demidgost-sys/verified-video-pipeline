@@ -19,9 +19,11 @@ Small, contract-preserving changes are welcome.
    python -m compileall -q src tests scripts
    ```
 
-6. Inspect the staged file list and Git author email before pushing. The public
-   gate also scans reachable commit and annotated-tag messages, but contributors
-   remain responsible for keeping private data out before it reaches Git.
+6. Inspect the staged file list and Git author email before pushing. Enable
+   GitHub's **Keep my email addresses private** setting before opening a pull
+   request: the public gate scans GitHub's synthetic PR merge commit as well as
+   reachable commit and annotated-tag messages. Contributors remain responsible
+   for keeping private data out before it reaches Git.
 
 ## Design rules
 

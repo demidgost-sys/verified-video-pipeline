@@ -35,8 +35,10 @@ reachable commit tree, commit messages, annotated-tag messages, and Git
 identities for credential-shaped filenames, common token signatures, private
 emails, account identifiers, user-home paths, binary content, and runtime
 evidence. GitHub-generated noreply identities are the only public-email
-exception. It is a preventive review layer, not a substitute for revocation
-when a real secret has existed in Git.
+exception. Pull-request CI intentionally includes GitHub's synthetic merge
+commit, so contributors must keep GitHub web-operation emails private. It is a
+preventive review layer, not a substitute for revocation when a real secret has
+existed in Git.
 
 Future release assets are bound to the tagged source by GitHub Artifact
 Attestations. This proves workflow identity and artifact digests; it does not
