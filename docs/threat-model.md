@@ -17,7 +17,10 @@
 - a lease override that aliases an unrelated local file;
 - accidental overwrite of an unrelated master;
 - accidental inclusion of generated media, runtime state, or credential-shaped
-  files in the current tree or reachable Git history.
+  files in the current tree or reachable Git history;
+- accidental disclosure through reachable commit or annotated-tag messages;
+- substitution of a future release asset after it was built from a tagged
+  source revision.
 
 ## Trust assumptions
 
@@ -35,7 +38,8 @@
 - sandboxing untrusted media or FFmpeg itself;
 - content, copyright, accessibility, mathematical, or editorial correctness;
 - distributed consensus across hosts or filesystems;
-- absolute protection from sudden power loss on arbitrary storage hardware.
+- absolute protection from sudden power loss on arbitrary storage hardware;
+- a provenance attestation proving that the reviewed source itself is benign.
 
 ## Controls
 
@@ -50,7 +54,8 @@
 | Lease path alias | Exclusive creation or an exact versioned ownership marker; unowned existing bytes are never modified. |
 | Arbitrary encode injection | Named profile and strict edit-plan keys; no raw args. |
 | Diagnostic path disclosure | Public subprocess errors expose only the tool and exit status. |
-| Private-data import | Fresh history, synthetic-only fixtures, current-tree and full-history denylist audit, ignored runtime evidence. |
+| Private-data import | Fresh history, synthetic-only fixtures, current-tree, every reachable historical path/blob and Git-metadata denylist audit, ignored runtime evidence. |
+| Release asset substitution | SHA-256 evidence plus GitHub-hosted Sigstore build-provenance attestations bound to the exact future tag workflow. |
 
 Security issues should be reported through the private process in
 [`SECURITY.md`](../SECURITY.md), not a public issue.

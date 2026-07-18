@@ -164,11 +164,19 @@ python -m compileall -q src tests scripts
 CI runs the unit suite and a real synthetic FFmpeg E2E on Ubuntu and macOS.
 Actions are pinned to immutable commit SHAs. The CI job is read-only; the
 separate CodeQL job receives only the required `security-events: write` scope.
-Dependabot tracks action and packaging updates.
+Dependabot tracks action and packaging updates. The public-tree gate also scans
+every reachable historical path and blob plus commit and annotated-tag
+messages, not only the current files, before a release can proceed.
 
-Version 0.1 is a GitHub source release. The built wheel intentionally contains
-the dependency-free CLI only; architecture, schemas, and examples remain
-repository-level review artifacts. No PyPI release is claimed.
+`v0.1.0` is the original GitHub source release and predates automated artifact
+attestations; it remains unchanged and has no signed release assets. Future
+strict `vX.Y.Z` tags use the fail-closed [release process](docs/release-process.md)
+to build with a hash-locked Ubuntu/Python 3.11 package set, verify the wheel in a
+clean environment, and transfer one immutable artifact to separate attestation
+and publication jobs. The final job rechecks the public immutable-tag ruleset
+shape and exact live tag; administrators separately maintain no-bypass tag rules
+and Immutable Releases as defense in depth. Architecture, schemas, and examples
+remain repository-level review artifacts. No PyPI release is claimed.
 
 Before proposing a change, read [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md), and [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
