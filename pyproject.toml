@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "verified-video-pipeline"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fail-closed release assurance for human-approved video artifacts"
 readme = "README.md"
 requires-python = ">=3.11"

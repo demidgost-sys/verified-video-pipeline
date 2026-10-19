@@ -142,6 +142,11 @@ jobs:
           "${RUNNER_TEMP}/release-wheel-venv/bin/vvp" status \
             "${RUNNER_TEMP}/release-wheel-demo" --verify
 
+      - name: Compare clean source wheel rebuild
+        run: |
+          python scripts/prepare_release.py reproduce \
+            --tag "${{ steps.release.outputs.tag }}" --release-dir release
+
       - name: Create canonical evidence and checksums
         run: |
           python scripts/prepare_release.py finalize \
@@ -255,6 +260,7 @@ jobs:
     permissions:
       contents: write
       attestations: read
+      actions: read
     steps:
       - name: Download the exact attested bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -342,6 +348,16 @@ jobs:
               --deny-self-hosted-runners
           done
 
+      - name: Require successful exact-commit CI and CodeQL and prepare release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.source_commit }}
+        run: |
+          python3 scripts/release_checks.py \
+            --commit "${RELEASE_COMMIT}" --release-dir release \
+            --notes-file "${RUNNER_TEMP}/release-notes.md" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Revalidate the public tag control and create the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -413,7 +429,7 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
             --fail-on-no-commits \
-            --generate-notes \
+            --notes-file "${RUNNER_TEMP}/release-notes.md" \
             --title "${RELEASE_TAG}" \
             "release/verified-video-pipeline-${RELEASE_VERSION}.tar.gz" \
             "release/verified_video_pipeline-${RELEASE_VERSION}-py3-none-any.whl" \

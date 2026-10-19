@@ -23,6 +23,9 @@ publishing.
 - same-filesystem, hard-link-based promotion that never replaces an existing
   master;
 - FFprobe contract checks plus a full, silent FFmpeg decode;
+- required engine fingerprints with a deterministic synthetic codec canary;
+- versioned measured loudness bound to exact master bytes and QA;
+- seeded lifecycle/crash-recovery model tests with a bounded deep profile;
 - a read-only status command that reports blockers without repairing state;
 - synthetic end-to-end acceptance tests on macOS and Linux.
 
@@ -100,6 +103,8 @@ neither side, recovery stops for operator review.
 
 Read [architecture](docs/architecture.md), [failure model](docs/failure-model.md),
 and [threat model](docs/threat-model.md) for the contracts and caveats.
+The [v0.2 contract](docs/v0.2-contract.md) specifies engine drift, measured
+loudness, schema compatibility, model replay and the native Windows boundary.
 
 ## Commands
 
@@ -110,10 +115,14 @@ and [threat model](docs/threat-model.md) for the contracts and caveats.
 | `vvp init PROJECT SOURCE --content-id ID` | Register source bytes already inside the project workspace. |
 | `vvp approve-plan PROJECT PLAN --reviewer NAME` | Snapshot and hash-bind a strict, human-reviewed plan. |
 | `vvp build PROJECT` | Render, validate, and promote a no-clobber master. |
-| `vvp qa PROJECT` | Revalidate all upstream bytes and fully decode the master. |
+| `vvp qa PROJECT` | Revalidate bytes/engine, decode, and measure master loudness. |
 | `vvp manifest PROJECT` | Create sanitized evidence for the exact QA-passed bytes. |
 | `vvp recover PROJECT` | Roll forward an intact journal or build receipt. |
 | `vvp status PROJECT [--verify]` | Inspect lifecycle and blockers without mutation. |
+
+Only `status --verify` can confirm READY in v0.2: size-only inspection requests
+verification before asserting readiness. Linux/macOS with local POSIX
+filesystems are supported; native Windows remains unsupported.
 
 The public edit-plan contract is intentionally narrow. It accepts one trim and
 one named encode profile; the trim must fit the registered source and the

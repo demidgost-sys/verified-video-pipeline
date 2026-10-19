@@ -36,6 +36,7 @@ VERIFICATION_CHECKS = (
     "unit_tests",
     "clean_wheel_install",
     "synthetic_ffmpeg_demo",
+    "wheel_rebuild_comparison",
 )
 
 
@@ -539,7 +540,13 @@ def _expected_evidence(
             "workflow": WORKFLOW_PATH,
         },
         "project": PROJECT_NAME,
-        "schema_version": 1,
+        "schema_version": 2,
+        "contracts": {
+            "project_schema": 2,
+            "release_manifest_schema": 2,
+            "engine_schema": 1,
+            "loudness_profile": "synthetic-web-loudness@1",
+        },
         "source": {
             "commit": source_commit,
             "ref": source_ref,
@@ -704,6 +711,71 @@ def verify_release(
             raise ReleaseError(f"checksum mismatch: {name}")
 
 
+def reproduce_wheel(*, tag: str, release_dir: Path, root: Path = ROOT) -> str:
+    """Compare a clean archive rebuild with the candidate wheel, offline."""
+    version = version_from_tag(tag)
+    commit = _resolve_commit(f"refs/tags/{tag}", root=root)
+    source_path, wheel_path = _asset_paths(
+        release_dir, version=version, source_commit=commit, root=root
+    )
+    epoch = _source_epoch(commit, root=root, enforce_environment=True)
+    with tempfile.TemporaryDirectory(prefix="vvp-rebuild-") as directory:
+        unpacked = Path(directory) / "source"
+        unpacked.mkdir()
+        # _asset_paths already proved the exact canonical git archive bytes.
+        # Still refuse non-regular members instead of relying on tar defaults.
+        with tarfile.open(source_path, "r:gz") as archive:
+            for member in archive.getmembers():
+                parts = Path(member.name).parts
+                if (
+                    not parts
+                    or parts[0] != f"{PROJECT_NAME}-{version}"
+                    or ".." in parts
+                    or Path(member.name).is_absolute()
+                    or not (member.isdir() or member.isfile())
+                ):
+                    raise ReleaseError("unsafe source archive member")
+                destination = unpacked / member.name
+                if member.isdir():
+                    destination.mkdir(parents=True, exist_ok=True)
+                else:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    data = archive.extractfile(member)
+                    if data is None:
+                        raise ReleaseError("source archive member is unreadable")
+                    destination.write_bytes(data.read())
+        rebuilt = Path(directory) / "wheels"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "wheel",
+                str(unpacked / f"{PROJECT_NAME}-{version}"),
+                "--no-index",
+                "--no-deps",
+                "--no-build-isolation",
+                "--wheel-dir",
+                str(rebuilt),
+            ],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=180,
+            env={**os.environ, "SOURCE_DATE_EPOCH": str(epoch), "PIP_NO_INDEX": "1"},
+        )
+        if result.returncode != 0:
+            raise ReleaseError("offline clean source wheel rebuild failed")
+        candidate = rebuilt / wheel_path.name
+        _require_regular_file(candidate)
+        if sorted(p.name for p in rebuilt.iterdir()) != [wheel_path.name]:
+            raise ReleaseError("rebuild produced an unexpected wheel set")
+        digest = _sha256(wheel_path)
+        if _sha256(candidate) != digest:
+            raise ReleaseError("clean rebuilt wheel bytes differ from candidate")
+    return digest
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -720,6 +792,12 @@ def _build_parser() -> argparse.ArgumentParser:
     archive = subparsers.add_parser("archive", help="build the tagged source archive")
     archive.add_argument("--tag", required=True)
     archive.add_argument("--output-dir", type=Path, required=True)
+
+    reproduce = subparsers.add_parser(
+        "reproduce", help="compare an offline archive wheel rebuild"
+    )
+    reproduce.add_argument("--tag", required=True)
+    reproduce.add_argument("--release-dir", type=Path, required=True)
 
     for command in ("finalize", "verify"):
         subparser = subparsers.add_parser(
@@ -760,6 +838,8 @@ def main(argv: list[str] | None = None) -> int:
                 release_dir=args.release_dir,
             )
             print(f"{evidence.name}\n{checksums.name}")
+        elif args.command == "reproduce":
+            print(reproduce_wheel(tag=args.tag, release_dir=args.release_dir))
         elif args.command == "verify":
             verify_release(
                 tag=args.tag,
@@ -775,6 +855,7 @@ def main(argv: list[str] | None = None) -> int:
         ReleaseError,
         OSError,
         subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
         tarfile.TarError,
         tomllib.TOMLDecodeError,
         zipfile.BadZipFile,

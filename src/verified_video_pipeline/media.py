@@ -11,9 +11,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from verified_video_pipeline.errors import ContractError, PipelineError
-
-
-PROFILE = "h264-aac-web"
+from verified_video_pipeline.profiles import LOUDNESS_FILTER, PROFILE
 
 
 def require_binary(name: str) -> str:
@@ -33,7 +31,7 @@ def _run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
             stderr=subprocess.PIPE,
             text=True,
             timeout=120,
-            env={**os.environ, "AV_LOG_FORCE_NOCOLOR": "1"},
+            env={**os.environ, "AV_LOG_FORCE_NOCOLOR": "1", "LC_ALL": "C"},
         )
     except subprocess.TimeoutExpired:
         # Leave the exception handler before raising the public error. A
@@ -214,6 +212,8 @@ def render(source: Path, target: Path, plan: dict[str, Any]) -> None:
             "128k",
             "-ar",
             "48000",
+            "-af",
+            LOUDNESS_FILTER,
             "-movflags",
             "+faststart",
             str(target),

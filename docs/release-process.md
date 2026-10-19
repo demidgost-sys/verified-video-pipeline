@@ -66,7 +66,73 @@ This lock covers the Python release/test package set. It does not claim that the
 moving `ubuntu-latest` image or the FFmpeg package installed by the runner is
 byte-reproducible. The workflow records their behavior through the test and
 synthetic-demo gates, and it does not claim reproducible wheel bytes without an
-independent rebuild comparison.
+independent rebuild comparison. v0.2 now performs that comparison: after the
+candidate wheel is built, `prepare_release.py reproduce` extracts the exact
+canonical tagged archive in a fresh directory, builds offline with the same
+locked backend and SOURCE_DATE_EPOCH, and requires identical wheel SHA-256.
+This proves reproduction within that toolchain, not across arbitrary runners.
+
+Before publication, the latest push CI and CodeQL runs for the exact main
+commit must both have completed successfully. The release notes record their
+specific run links, the release run, artifact digests, schema/profile versions
+and known limits. A successful run on another commit or an older green run
+followed by failure cannot satisfy that gate.
+
+## Clean-clone rehearsal checklist
+
+Use an isolated fresh clone of the reviewed commit. Until the PR is merged,
+this is a rehearsal only and cannot pass the real origin/main ancestry gate.
+After merge, the following commands are the local unsigned rehearsal. They do
+not mint a GitHub attestation and do not push or publish anything:
+
+```bash
+git clone https://github.com/demidgost-sys/verified-video-pipeline.git vvp-release-check
+cd vvp-release-check
+git fetch --tags origin
+git switch --detach origin/main
+python3.11 -m venv .venv
+. .venv/bin/activate
+python -m pip install --require-hashes --only-binary=:all: -r requirements/release.txt
+python -m pip install --no-deps --no-build-isolation -e .
+python scripts/audit_public_tree.py
+python -m compileall -q src tests scripts
+ruff check src tests scripts
+ruff format --check src tests scripts
+python -m unittest discover -s tests -v
+VVP_MODEL_PROFILE=deep python -m unittest discover -s tests -p test_model.py -v
+# Create only if v0.2.0 does not already exist. Never replace a tag.
+git tag -a v0.2.0 -m 'Release v0.2.0'
+commit=$(git rev-parse HEAD)
+tag_object=$(git rev-parse refs/tags/v0.2.0)
+export SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
+python scripts/prepare_release.py check --tag v0.2.0 \
+  --source-ref refs/tags/v0.2.0 --expected-sha "$commit" \
+  --main-ref refs/remotes/origin/main --event-name push --run-attempt 1
+python scripts/prepare_release.py archive --tag v0.2.0 --output-dir dist
+python -m pip wheel . --no-index --no-deps --no-build-isolation --wheel-dir dist
+python scripts/prepare_release.py reproduce --tag v0.2.0 --release-dir dist
+python scripts/prepare_release.py finalize --tag v0.2.0 \
+  --source-ref refs/tags/v0.2.0 --source-commit "$commit" \
+  --tag-object "$tag_object" --release-dir dist
+python scripts/prepare_release.py verify --tag v0.2.0 \
+  --source-ref refs/tags/v0.2.0 --source-commit "$commit" \
+  --tag-object "$tag_object" --release-dir dist
+(cd dist && sha256sum --check --strict SHA256SUMS)
+python3.11 -m venv /tmp/vvp-clean-wheel
+/tmp/vvp-clean-wheel/bin/python -m pip install --no-index --no-deps dist/*.whl
+/tmp/vvp-clean-wheel/bin/vvp --version
+/tmp/vvp-clean-wheel/bin/vvp doctor
+/tmp/vvp-clean-wheel/bin/vvp demo /tmp/vvp-clean-demo
+/tmp/vvp-clean-wheel/bin/vvp status /tmp/vvp-clean-demo --verify
+```
+
+Use fresh unused `/tmp` paths for each rehearsal. The hash lock is for the
+Linux/Python 3.11 release environment; macOS PR tests use the development extra.
+Check the exact 0.2.0 CLI/import version and READY report. Preserve rehearsal
+logs and hashes as local evidence, explicitly labelled unsigned. Inspect
+`requirements/release.txt` and the exact source before running it. The real
+release remains the tag-only build/attest/publish workflow and consumer
+verification below, including external CI/CodeQL and the GitHub controls.
 
 ## GitHub controls and trust boundary
 

@@ -106,6 +106,13 @@ unregistered staging/master entries. With `--verify`, it also rehashes
 registered artifacts. That distinction is reported as `size-only` or `sha256`
 in the output.
 
+In v0.2, verified status also recaptures the required engine fingerprint under
+the fail-fast media lease. A size-only READY inspection requests `verify` and
+does not assert readiness. Build, receipt recovery, QA and manifest gates bind
+engine schema 1; QA additionally measures encoded-master loudness and binds its
+engine and master SHA-256. See the complete
+[v0.2 contract](v0.2-contract.md), including legacy schema handling.
+
 ## Deliberate limits
 
 The state file is not a multi-writer database. Locks are advisory and protect
