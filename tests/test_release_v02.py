@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import tempfile
 import unittest
@@ -57,7 +58,10 @@ class ReleaseGateTests(unittest.TestCase):
             )
 
     def test_clean_rebuild_comparison_rejects_different_bytes(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
+            # Synthetic repositories own their timestamps; the caller's release
+            # epoch must be restored when this test finishes, not applied here.
+            os.environ.pop("SOURCE_DATE_EPOCH", None)
             root = Path(directory)
             initialize_tagged_repository(root)
             assets = root / "dist"

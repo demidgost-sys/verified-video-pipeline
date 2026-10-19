@@ -102,24 +102,24 @@ python scripts/audit_public_tree.py
 python -m compileall -q src tests scripts
 ruff check src tests scripts
 ruff format --check src tests scripts
+export SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
 python -m unittest discover -s tests -v
 VVP_MODEL_PROFILE=deep python -m unittest discover -s tests -p test_model.py -v
-# Create only if v0.2.0 does not already exist. Never replace a tag.
-git tag -a v0.2.0 -m 'Release v0.2.0'
+# Create only if v0.2.1 does not already exist. Never replace a tag.
+git tag -a v0.2.1 -m 'Release v0.2.1'
 commit=$(git rev-parse HEAD)
-tag_object=$(git rev-parse refs/tags/v0.2.0)
-export SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
-python scripts/prepare_release.py check --tag v0.2.0 \
-  --source-ref refs/tags/v0.2.0 --expected-sha "$commit" \
+tag_object=$(git rev-parse refs/tags/v0.2.1)
+python scripts/prepare_release.py check --tag v0.2.1 \
+  --source-ref refs/tags/v0.2.1 --expected-sha "$commit" \
   --main-ref refs/remotes/origin/main --event-name push --run-attempt 1
-python scripts/prepare_release.py archive --tag v0.2.0 --output-dir dist
+python scripts/prepare_release.py archive --tag v0.2.1 --output-dir dist
 python -m pip wheel . --no-index --no-deps --no-build-isolation --wheel-dir dist
-python scripts/prepare_release.py reproduce --tag v0.2.0 --release-dir dist
-python scripts/prepare_release.py finalize --tag v0.2.0 \
-  --source-ref refs/tags/v0.2.0 --source-commit "$commit" \
+python scripts/prepare_release.py reproduce --tag v0.2.1 --release-dir dist
+python scripts/prepare_release.py finalize --tag v0.2.1 \
+  --source-ref refs/tags/v0.2.1 --source-commit "$commit" \
   --tag-object "$tag_object" --release-dir dist
-python scripts/prepare_release.py verify --tag v0.2.0 \
-  --source-ref refs/tags/v0.2.0 --source-commit "$commit" \
+python scripts/prepare_release.py verify --tag v0.2.1 \
+  --source-ref refs/tags/v0.2.1 --source-commit "$commit" \
   --tag-object "$tag_object" --release-dir dist
 (cd dist && sha256sum --check --strict SHA256SUMS)
 python3.11 -m venv /tmp/vvp-clean-wheel
@@ -132,7 +132,7 @@ python3.11 -m venv /tmp/vvp-clean-wheel
 
 Use fresh unused `/tmp` paths for each rehearsal. The hash lock is for the
 Linux/Python 3.11 release environment; macOS PR tests use the development extra.
-Check the exact 0.2.0 CLI/import version and READY report. Preserve rehearsal
+Check the exact 0.2.1 CLI/import version and READY report. Preserve rehearsal
 logs and hashes as local evidence, explicitly labelled unsigned. Inspect
 `requirements/release.txt` and the exact source before running it. The real
 release remains the tag-only build/attest/publish workflow and consumer
@@ -171,7 +171,7 @@ to replace an existing release.
    it.
 4. Confirm the required ruleset and Immutable Releases setting are active.
 5. Create an annotated tag whose name is exactly `vMAJOR.MINOR.PATCH`, for
-   example `git tag -a v0.2.0 -m "Release v0.2.0"`.
+   example `git tag -a v0.2.1 -m "Release v0.2.1"`.
 6. Push that tag once. Do not move, delete and recreate, or reuse a release tag.
 7. Review the workflow run and the resulting release. A failed or rerun release
    uses a new version and annotated tag rather than overwriting published
@@ -207,18 +207,18 @@ first verify the checksums:
 git clone https://github.com/demidgost-sys/verified-video-pipeline.git
 cd verified-video-pipeline
 git fetch --tags origin
-gh release download v0.2.0 --dir verify-v0.2.0
-(cd verify-v0.2.0 && sha256sum --check --strict SHA256SUMS)
+gh release download v0.2.1 --dir verify-v0.2.1
+(cd verify-v0.2.1 && sha256sum --check --strict SHA256SUMS)
 ```
 
-On macOS, `(cd verify-v0.2.0 && shasum -a 256 -c SHA256SUMS)` performs the
+On macOS, `(cd verify-v0.2.1 && shasum -a 256 -c SHA256SUMS)` performs the
 checksum check. Then obtain the three expected source identities from the
 evidence and prove that the local annotated tag resolves to those exact objects:
 
 ```bash
-tag=v0.2.0
+tag=v0.2.1
 ref="refs/tags/${tag}"
-evidence=verify-v0.2.0/release-evidence.json
+evidence=verify-v0.2.1/release-evidence.json
 test "$(jq -r '.source.ref' "${evidence}")" = "${ref}"
 test "$(git cat-file -t "${ref}")" = "tag"
 test "$(git rev-parse --verify "${ref}")" = \
@@ -233,11 +233,11 @@ exact attestation policy:
 ```bash
 commit="$(jq -r '.source.commit' "${evidence}")"
 gh attestation verify \
-  verify-v0.2.0/verified_video_pipeline-0.2.0-py3-none-any.whl \
+  verify-v0.2.1/verified_video_pipeline-0.2.1-py3-none-any.whl \
   --repo demidgost-sys/verified-video-pipeline \
   --signer-workflow demidgost-sys/verified-video-pipeline/.github/workflows/release.yml \
   --signer-digest "${commit}" \
-  --source-ref refs/tags/v0.2.0 \
+  --source-ref refs/tags/v0.2.1 \
   --source-digest "${commit}" \
   --digest-alg sha256 \
   --deny-self-hosted-runners
@@ -257,3 +257,12 @@ and workflow policy separately.
 historical source release: it has no GitHub Artifact Attestation and must not be
 retagged, rebuilt, or described as signed. The signed-release contract applies
 only to future versions created after this workflow enters `main`.
+
+## Failed v0.2.0 attempt
+
+v0.2.0 permanently identifies commit bcfb286fea0652dc5ff91b0135d179ac56990ca2.
+Its first tag-only run stopped in the build job because two synthetic tests
+inherited the tagged project SOURCE_DATE_EPOCH. No attestation or release was
+created. The tag remains unchanged; release reruns stay forbidden. The v0.2.1
+candidate isolates fixture epochs and runs PR CI and rehearsals with the same
+release environment. Publishing that new version requires owner confirmation.
