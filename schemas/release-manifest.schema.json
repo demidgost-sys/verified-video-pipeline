@@ -1,5 +1,241 @@
 {
   "$defs": {
+    "engine": {
+      "additionalProperties": false,
+      "properties": {
+        "informational": {
+          "additionalProperties": false,
+          "properties": {
+            "build_ids": {
+              "additionalProperties": false,
+              "properties": {
+                "ffmpeg": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "ffprobe": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "required": [
+                "ffmpeg",
+                "ffprobe"
+              ],
+              "type": "object"
+            },
+            "platform": {
+              "enum": [
+                "Linux",
+                "Darwin"
+              ]
+            }
+          },
+          "required": [
+            "platform",
+            "build_ids"
+          ],
+          "type": "object"
+        },
+        "required": {
+          "additionalProperties": false,
+          "properties": {
+            "canary_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "ffmpeg": {
+              "additionalProperties": false,
+              "properties": {
+                "libraries": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "libavcodec": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavfilter": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavformat": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavutil": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libswresample": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libswscale": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "libavutil",
+                    "libavcodec",
+                    "libavformat",
+                    "libavfilter",
+                    "libswscale",
+                    "libswresample"
+                  ],
+                  "type": "object"
+                },
+                "version": {
+                  "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "version",
+                "libraries"
+              ],
+              "type": "object"
+            },
+            "ffprobe": {
+              "additionalProperties": false,
+              "properties": {
+                "libraries": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "libavcodec": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavfilter": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavformat": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libavutil": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libswresample": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    },
+                    "libswscale": {
+                      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "libavutil",
+                    "libavcodec",
+                    "libavformat",
+                    "libswscale",
+                    "libswresample"
+                  ],
+                  "type": "object"
+                },
+                "version": {
+                  "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "version",
+                "libraries"
+              ],
+              "type": "object"
+            },
+            "loudness_profile": {
+              "const": {
+                "dual_mono": false,
+                "id": "synthetic-web-loudness",
+                "maximum_true_peak_dbtp": -1.0,
+                "target_lufs": -16.0,
+                "tolerance_lu": 1.0,
+                "version": 1
+              }
+            },
+            "profile": {
+              "const": "h264-aac-web"
+            },
+            "render_contract_version": {
+              "const": 2
+            }
+          },
+          "required": [
+            "ffmpeg",
+            "ffprobe",
+            "profile",
+            "render_contract_version",
+            "loudness_profile",
+            "canary_sha256"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "schema_version",
+        "sha256",
+        "required",
+        "informational"
+      ],
+      "type": "object"
+    },
+    "loudness": {
+      "additionalProperties": false,
+      "properties": {
+        "integrated_lufs": {
+          "maximum": -15,
+          "minimum": -17,
+          "type": "number"
+        },
+        "method": {
+          "const": "ffmpeg-loudnorm-input-v1"
+        },
+        "profile": {
+          "const": {
+            "dual_mono": false,
+            "id": "synthetic-web-loudness",
+            "maximum_true_peak_dbtp": -1.0,
+            "target_lufs": -16.0,
+            "tolerance_lu": 1.0,
+            "version": 1
+          }
+        },
+        "range_lu": {
+          "maximum": 99,
+          "minimum": 0,
+          "type": "number"
+        },
+        "status": {
+          "const": "PASS"
+        },
+        "threshold_lufs": {
+          "maximum": 0,
+          "minimum": -99,
+          "type": "number"
+        },
+        "true_peak_dbtp": {
+          "maximum": -1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "profile",
+        "method",
+        "status",
+        "integrated_lufs",
+        "true_peak_dbtp",
+        "range_lu",
+        "threshold_lufs"
+      ],
+      "type": "object"
+    },
     "probe": {
       "additionalProperties": false,
       "properties": {
@@ -87,6 +323,9 @@
     "artifact": {
       "additionalProperties": false,
       "properties": {
+        "engine": {
+          "$ref": "#/$defs/engine"
+        },
         "probe": {
           "$ref": "#/$defs/probe"
         },
@@ -105,7 +344,8 @@
         "sha256",
         "size",
         "profile",
-        "probe"
+        "probe",
+        "engine"
       ],
       "type": "object"
     },
@@ -145,6 +385,15 @@
           "minItems": 1,
           "type": "array"
         },
+        "engine_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "loudness": {
+          "$ref": "#/$defs/loudness"
+        },
+        "master_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
         "probe": {
           "$ref": "#/$defs/probe"
         },
@@ -156,7 +405,10 @@
         "status",
         "checked_at",
         "checks",
-        "probe"
+        "probe",
+        "loudness",
+        "engine_sha256",
+        "master_sha256"
       ],
       "type": "object"
     },
@@ -165,7 +417,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "source": {
       "additionalProperties": false,

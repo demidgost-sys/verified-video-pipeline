@@ -307,7 +307,7 @@ class PipelineIntegrationTests(unittest.TestCase):
             report = status(root)
             self.assertEqual(report["stage"], "READY")
             self.assertNotIn("UNREGISTERED_MASTER", report["blockers"])
-            self.assertEqual(report["next_action"], "none")
+            self.assertEqual(report["next_action"], "verify")
 
     def test_corrupt_post_commit_build_receipt_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -323,7 +323,7 @@ class PipelineIntegrationTests(unittest.TestCase):
             receipt = root / "build-receipt.json"
             receipt.write_text(
                 receipt.read_text(encoding="utf-8").replace(
-                    '"schema_version":1', '"schema_version":2'
+                    '"schema_version":2', '"schema_version":999'
                 ),
                 encoding="utf-8",
             )
@@ -497,7 +497,7 @@ class PipelineIntegrationTests(unittest.TestCase):
             receipt_path = root / "build-receipt.json"
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             receipt.pop("record_sha256")
-            receipt["schema_version"] = 2
+            receipt["schema_version"] = 999
             receipt["record_sha256"] = json_sha256(receipt)
             atomic_write_json(receipt_path, receipt)
             with self.assertRaisesRegex(RecoveryRequired, "schema version"):

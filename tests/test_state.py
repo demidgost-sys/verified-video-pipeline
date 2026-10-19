@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from copy import deepcopy
+from synthetic_contracts import engine_record, loudness_record
 
 from verified_video_pipeline.errors import ContractError
 from verified_video_pipeline.state import (
@@ -34,12 +35,16 @@ MASTER = {
     "probe": PROBE,
     "source_sha256": SOURCE["sha256"],
     "plan_sha256": APPROVED_PLAN["sha256"],
+    "engine": engine_record(),
 }
 QA = {
     "status": "PASS",
     "checked_at": "2026-07-18T12:00:00+00:00",
     "checks": ["strict full decode completed without errors"],
     "probe": PROBE,
+    "loudness": loudness_record(),
+    "engine_sha256": MASTER["engine"]["sha256"],
+    "master_sha256": MASTER["sha256"],
 }
 RELEASE_MANIFEST = {
     "path": "release-manifest.json",

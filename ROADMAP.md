@@ -18,12 +18,20 @@ production accounts, content, code, and history remain private.
 
 ## v0.2 — strengthen the contract
 
-- [ ] Record and detect relevant FFmpeg engine-contract drift.
-- [ ] Add randomized transition and recovery-model tests without production
+- [x] Record and detect relevant FFmpeg engine-contract drift.
+- [x] Add randomized transition and recovery-model tests without production
   fixtures.
-- [ ] Add measured loudness checks behind a versioned profile.
-- [ ] Publish signed release artifacts and a reproducible release checklist.
-- [ ] Evaluate Windows abstractions without weakening POSIX guarantees.
+- [x] Add measured loudness checks behind a versioned profile.
+- [x] Add a fail-closed attested-artifact workflow and hash-locked release
+  checklist for future tags.
+- [ ] Publish the first new release through that workflow; `v0.1.0` intentionally
+  remains the pre-attestation source release.
+- [x] Evaluate Windows abstractions without weakening POSIX guarantees.
+
+See [v0.2 contracts and limits](docs/v0.2-contract.md). Windows remains
+unsupported. The signed-release implementation and clean-clone rehearsal are
+ready; the publication checkbox requires the future tagged GitHub-hosted run,
+successful external attestation verification and release receipt.
 
 ## v0.3 — adapters after evidence
 

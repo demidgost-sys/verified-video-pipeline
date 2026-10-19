@@ -22,6 +22,12 @@ from verified_video_pipeline.errors import (
     ContractError,
     IntegrityError,
     RecoveryRequired,
+    PipelineError,
+)
+from verified_video_pipeline.engine import (
+    capture_engine,
+    require_engine,
+    validate_engine,
 )
 from verified_video_pipeline.hashing import (
     require_identity,
@@ -30,6 +36,7 @@ from verified_video_pipeline.hashing import (
 )
 from verified_video_pipeline.journal import StateStore
 from verified_video_pipeline.locks import heavy_media_lease, project_lease
+from verified_video_pipeline.loudness import measure_loudness
 from verified_video_pipeline.media import (
     PROFILE,
     generate_synthetic_video,
@@ -184,6 +191,20 @@ def _write_exact_json(path: Path, value: dict[str, Any]) -> dict[str, Any]:
     return identity
 
 
+def _require_v02(state: dict[str, Any]) -> None:
+    if state["schema_version"] != 2:
+        raise ContractError(
+            "legacy v0.1 evidence requires a fresh workspace and human approval"
+        )
+
+
+def _require_current_engine(state: dict[str, Any]) -> dict[str, Any]:
+    _require_v02(state)
+    actual = capture_engine()
+    require_engine(state["master"].get("engine"), actual)
+    return actual
+
+
 def initialize(root: Path, source: Path, content_id: str) -> dict[str, Any]:
     root.mkdir(parents=True, exist_ok=True)
     _preflight_new_workspace(root, source)
@@ -196,12 +217,13 @@ def initialize(root: Path, source: Path, content_id: str) -> dict[str, Any]:
 
 def approve_plan(root: Path, plan_path: Path, reviewer: str) -> dict[str, Any]:
     reviewer = _validate_reviewer(reviewer)
-    with project_lease(root):
+    with project_lease(root), heavy_media_lease():
         store = StateStore(root)
         _recover_locked(root, store)
         state = store.load()
         if Stage(state["stage"]) is not Stage.REGISTERED:
             raise ContractError("plan approval requires REGISTERED stage")
+        _require_v02(state)
         source = _artifact_path(root, state["source"])
         require_identity(source, state["source"], label="source")
         plan = validate_plan(read_json(plan_path))
@@ -228,7 +250,13 @@ def build(root: Path) -> dict[str, Any]:
         store = StateStore(root)
         _recover_locked(root, store)
         state = store.load()
+        _require_v02(state)
         if Stage(state["stage"]) is Stage.MASTER_READY:
+            _require_current_engine(state)
+            for label in ("source", "approved_plan"):
+                require_identity(
+                    _artifact_path(root, state[label]), state[label], label=label
+                )
             require_identity(
                 _artifact_path(root, state["master"]), state["master"], label="master"
             )
@@ -262,10 +290,16 @@ def build(root: Path) -> dict[str, Any]:
                 "unregistered staging entry exists; operator review required"
             )
 
+        engine = capture_engine()
         render(source, staged, plan)
         checked_master, _ = _checked_media_identity(root, staged)
         master_probe = checked_master["probe"]
         validate_render_duration(plan, master_probe)
+        require_identity(source, state["source"], label="source after render")
+        require_identity(
+            approved_plan, state["approved_plan"], label="approved plan after render"
+        )
+        require_engine(engine, capture_engine())
         # The final path does not exist yet; bind staged bytes to its future name.
         master_identity = {
             "path": _relative_path(root, master),
@@ -276,9 +310,10 @@ def build(root: Path) -> dict[str, Any]:
             "source_sha256": state["source"]["sha256"],
             "plan_sha256": state["approved_plan"]["sha256"],
             "built_at": utc_now(),
+            "engine": engine,
         }
         receipt = {
-            "schema_version": 1,
+            "schema_version": 2,
             "source_sha256": state["source"]["sha256"],
             "plan_sha256": state["approved_plan"]["sha256"],
             "staged_path": STAGING_NAME,
@@ -312,11 +347,12 @@ def _validate_receipt(path: Path) -> dict[str, Any]:
     claimed = receipt.pop("record_sha256", None)
     if claimed != json_sha256(receipt):
         raise RecoveryRequired("build receipt self-hash mismatch")
-    if type(receipt.get("schema_version")) is not int or receipt["schema_version"] != 1:
+    if type(receipt.get("schema_version")) is not int or receipt["schema_version"] != 2:
         raise RecoveryRequired("unsupported build receipt schema version")
     master = receipt.get("master")
     if not isinstance(master, dict):
         raise RecoveryRequired("build receipt has no master identity")
+    validate_engine(master.get("engine"))
     return receipt
 
 
@@ -329,7 +365,24 @@ def _recover_build_locked(
         raise RecoveryRequired("build receipt belongs to a different source")
     if receipt.get("plan_sha256") != state["approved_plan"]["sha256"]:
         raise RecoveryRequired("build receipt belongs to a different approved plan")
+    _require_v02(state)
+    require_identity(
+        _artifact_path(root, state["source"]), state["source"], label="source"
+    )
+    require_identity(
+        _artifact_path(root, state["approved_plan"]),
+        state["approved_plan"],
+        label="approved plan",
+    )
     master_identity = receipt["master"]
+    if (
+        master_identity.get("path") != MASTER_NAME
+        or master_identity.get("profile") != PROFILE
+        or master_identity.get("source_sha256") != state["source"]["sha256"]
+        or master_identity.get("plan_sha256") != state["approved_plan"]["sha256"]
+    ):
+        raise RecoveryRequired("build receipt master binding is invalid")
+    require_engine(master_identity.get("engine"), capture_engine())
     master = _artifact_path(root, master_identity)
     staged_path = receipt.get("staged_path")
     if staged_path != STAGING_NAME:
@@ -382,6 +435,7 @@ def run_qa(root: Path) -> dict[str, Any]:
         state = store.load()
         if Stage(state["stage"]) is not Stage.MASTER_READY:
             raise ContractError("QA requires MASTER_READY stage")
+        engine = _require_current_engine(state)
         source = _artifact_path(root, state["source"])
         plan = _artifact_path(root, state["approved_plan"])
         master = _artifact_path(root, state["master"])
@@ -392,8 +446,12 @@ def run_qa(root: Path) -> dict[str, Any]:
         validate_plan_against_source(approved_plan, state["source"]["probe"])
         require_identity(master, state["master"], label="master")
         evidence, checks = technical_checks(master)
+        loudness = measure_loudness(master)
         require_identity(master, state["master"], label="master after QA")
+        require_identity(source, state["source"], label="source after QA")
+        require_identity(plan, state["approved_plan"], label="approved plan after QA")
         validate_render_duration(approved_plan, evidence)
+        require_engine(engine, capture_engine())
 
         def mutate(current: dict[str, Any]) -> dict[str, Any]:
             result = advance(current, Stage.QA_PASSED)
@@ -402,19 +460,26 @@ def run_qa(root: Path) -> dict[str, Any]:
                 "checked_at": utc_now(),
                 "checks": checks,
                 "probe": evidence,
+                "loudness": loudness,
+                "engine_sha256": engine["sha256"],
+                "master_sha256": state["master"]["sha256"],
             }
+            result["qa"]["checks"].append(
+                "measured loudness passed synthetic-web-loudness v1"
+            )
             return result
 
         return store.transact(mutate)
 
 
 def create_manifest(root: Path) -> dict[str, Any]:
-    with project_lease(root):
+    with project_lease(root), heavy_media_lease():
         store = StateStore(root)
         _recover_locked(root, store)
         state = store.load()
         if Stage(state["stage"]) is not Stage.QA_PASSED:
             raise ContractError("manifest creation requires QA_PASSED stage")
+        _require_current_engine(state)
         for label in ("source", "approved_plan", "master"):
             require_identity(
                 _artifact_path(root, state[label]),
@@ -422,7 +487,7 @@ def create_manifest(root: Path) -> dict[str, Any]:
                 label=label.replace("_", " "),
             )
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "release_id": f"sha256-{state['master']['sha256'][:16]}",
             "source": {
                 "sha256": state["source"]["sha256"],
@@ -437,6 +502,7 @@ def create_manifest(root: Path) -> dict[str, Any]:
                 "size": state["master"]["size"],
                 "profile": state["master"]["profile"],
                 "probe": state["master"]["probe"],
+                "engine": deepcopy(state["master"]["engine"]),
             },
             "qa": deepcopy(state["qa"]),
             "provenance": {
@@ -462,7 +528,7 @@ def create_manifest(root: Path) -> dict[str, Any]:
 
 
 def recover(root: Path) -> dict[str, Any]:
-    with project_lease(root):
+    with project_lease(root), heavy_media_lease():
         store = StateStore(root)
         _recover_locked(root, store)
         return store.load()
@@ -492,6 +558,7 @@ def _recover_locked(root: Path, store: StateStore) -> None:
             raise RecoveryRequired(
                 "completed build receipt does not match registered master"
             )
+        _require_current_engine(state)
         require_identity(
             _artifact_path(root, state["master"]), state["master"], label="master"
         )
@@ -539,6 +606,20 @@ def status(root: Path, *, verify: bool = False) -> dict[str, Any]:
             except IntegrityError:
                 blockers.append(f"HASH_MISMATCH_{label.upper()}")
 
+    if state["schema_version"] != 2:
+        blockers.append("LEGACY_EVIDENCE_REBUILD_REQUIRED")
+    elif isinstance(state.get("master"), dict):
+        if verify:
+            with heavy_media_lease():
+                try:
+                    _require_current_engine(state)
+                except IntegrityError:
+                    blockers.append("ENGINE_CONTRACT_DRIFT")
+                except (ContractError, PipelineError):
+                    blockers.append("ENGINE_CONTRACT_UNAVAILABLE")
+        elif stage is Stage.READY:
+            blockers.append("ENGINE_VERIFICATION_REQUIRED")
+
     next_actions = {
         Stage.REGISTERED: "approve-plan",
         Stage.PLAN_APPROVED: "build",
@@ -549,7 +630,11 @@ def status(root: Path, *, verify: bool = False) -> dict[str, Any]:
     next_action = next_actions[stage]
     if blockers:
         next_action = (
-            "recover" if "RECOVERY_REQUIRED" in blockers else "operator-review"
+            "recover"
+            if "RECOVERY_REQUIRED" in blockers
+            else "verify"
+            if blockers == ["ENGINE_VERIFICATION_REQUIRED"]
+            else "operator-review"
         )
     return {
         "schema_version": 1,

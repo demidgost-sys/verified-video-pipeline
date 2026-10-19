@@ -10,9 +10,11 @@ from enum import StrEnum
 from typing import Any
 
 from verified_video_pipeline.errors import ContractError
+from verified_video_pipeline.engine import validate_engine
+from verified_video_pipeline.profiles import validate_loudness
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 CONTENT_ID = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$")
 
 
@@ -60,10 +62,10 @@ def new_state(content_id: str, source: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_state(state: dict[str, Any]) -> None:
-    if (
-        type(state.get("schema_version")) is not int
-        or state["schema_version"] != SCHEMA_VERSION
-    ):
+    if type(state.get("schema_version")) is not int or state["schema_version"] not in {
+        1,
+        SCHEMA_VERSION,
+    }:
         raise ContractError("unsupported project schema version")
     if type(state.get("revision")) is not int or state["revision"] < 0:
         raise ContractError("project revision must be a non-negative integer")
@@ -89,6 +91,8 @@ def validate_state(state: dict[str, Any]) -> None:
         _validate_probe(master.get("probe"), "master")
         _validate_binding(master, "source_sha256", source["sha256"], "source")
         _validate_binding(master, "plan_sha256", plan["sha256"], "approved plan")
+        if state["schema_version"] == 2:
+            validate_engine(master.get("engine"))
     if stage in {Stage.QA_PASSED, Stage.READY}:
         qa = state.get("qa")
         if not isinstance(qa, dict) or qa.get("status") != "PASS":
@@ -103,6 +107,12 @@ def validate_state(state: dict[str, Any]) -> None:
         if not isinstance(qa.get("checked_at"), str) or not qa["checked_at"].strip():
             raise ContractError("QA evidence has no check time")
         _validate_probe(qa.get("probe"), "QA")
+        if state["schema_version"] == 2:
+            validate_loudness(qa.get("loudness"))
+            if qa.get("engine_sha256") != master["engine"]["sha256"]:
+                raise ContractError("QA belongs to a different engine contract")
+            if qa.get("master_sha256") != master["sha256"]:
+                raise ContractError("QA belongs to different master bytes")
     if stage is Stage.READY:
         _validate_artifact(state.get("release_manifest"), "release manifest")
 
