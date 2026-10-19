@@ -314,7 +314,8 @@ jobs:
             --arg tag "${RELEASE_TAG}" \
             --arg tag_object "${RELEASE_TAG_OBJECT}" \
             --arg version "${RELEASE_VERSION}" \
-            '.schema_version == 1 and
+            '.schema_version == 2 and
+             .contracts == {"engine_schema": 1, "loudness_profile": "synthetic-web-loudness@1", "project_schema": 2, "release_manifest_schema": 2} and
              .project == "verified-video-pipeline" and
              .tag == $tag and .version == $version and
              .source.commit == $commit and .source.ref == $ref and
@@ -348,12 +349,20 @@ jobs:
               --deny-self-hosted-runners
           done
 
+      - name: Check out verified source for release notes
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.source_commit }}
+          path: publish-source
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Require successful exact-commit CI and CodeQL and prepare release notes
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_COMMIT: ${{ needs.build.outputs.source_commit }}
         run: |
-          python3 scripts/release_checks.py \
+          python3 publish-source/scripts/release_checks.py \
             --commit "${RELEASE_COMMIT}" --release-dir release \
             --notes-file "${RUNNER_TEMP}/release-notes.md" \
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
