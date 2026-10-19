@@ -48,6 +48,10 @@ The publish job has only:
 It downloads the same immutable artifact ID, verifies `SHA256SUMS` and canonical
 evidence again, and verifies every artifact attestation against this repository,
 `.github/workflows/release.yml`, the exact tag ref, and the exact source commit.
+After those verifications it materializes only the regular, uniquely named
+release-check helper from the attested source archive into a fresh temporary
+file. The write-enabled publish job performs no repository checkout. The helper
+checks exact-main-commit CI/CodeQL and writes the release notes.
 In its final step it re-reads the publicly observable tag-ruleset shape and the
 live remote annotated-tag object, refuses an existing release, and only then calls
 `gh release create --verify-tag`. A workflow rerun, missing API access, policy

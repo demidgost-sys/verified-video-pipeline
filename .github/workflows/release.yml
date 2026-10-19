@@ -349,20 +349,37 @@ jobs:
               --deny-self-hosted-runners
           done
 
-      - name: Check out verified source for release notes
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ needs.build.outputs.source_commit }}
-          path: publish-source
-          fetch-depth: 1
-          persist-credentials: false
+      - name: Materialize notes helper from verified source archive
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import tarfile
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          member_name = f"verified-video-pipeline-{version}/scripts/release_checks.py"
+          with tarfile.open(f"release/verified-video-pipeline-{version}.tar.gz", "r:gz") as archive:
+              matches = [member for member in archive.getmembers() if member.name == member_name]
+              if len(matches) != 1 or not matches[0].isfile() or not 0 < matches[0].size <= 1024 * 1024:
+                  raise SystemExit("Attested source has no unique regular release-check helper")
+              with archive.extractfile(matches[0]) as source:
+                  data = source.read(1024 * 1024 + 1)
+              if len(data) != matches[0].size:
+                  raise SystemExit("Release-check helper size mismatch")
+          target = Path(os.environ["RUNNER_TEMP"]) / "vvp-release-checks.py"
+          with target.open("xb") as output:
+              output.write(data)
+          PY
 
       - name: Require successful exact-commit CI and CodeQL and prepare release notes
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_COMMIT: ${{ needs.build.outputs.source_commit }}
         run: |
-          python3 publish-source/scripts/release_checks.py \
+          python3 "${RUNNER_TEMP}/vvp-release-checks.py" \
             --commit "${RELEASE_COMMIT}" --release-dir release \
             --notes-file "${RUNNER_TEMP}/release-notes.md" \
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

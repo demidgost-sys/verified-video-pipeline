@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import io
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import textwrap
 import unittest
@@ -36,23 +38,85 @@ def publish_script(name):
 
 
 class PublishSourceContractTests(unittest.TestCase):
-    def test_notes_helper_is_materialized_from_exact_build_commit_before_use(self):
+    def test_notes_helper_comes_from_verified_bundle_before_use(self):
         job = publish_job()
-        helper = job.index("python3 publish-source/scripts/release_checks.py")
-        prefix = job[:helper]
-        self.assertIn("uses: actions/checkout@", prefix)
-        checkout = prefix[prefix.rindex("uses: actions/checkout@") :].split(
-            "\n      - name:", 1
-        )[0]
-        self.assertIn("ref: ${{ needs.build.outputs.source_commit }}", checkout)
-        self.assertIn("persist-credentials: false", checkout)
-        self.assertIn("path: publish-source", checkout)
-        # The downloaded four-file bundle contains no executable helper.
-        # A fresh runner must materialize reviewed source, not rely on a prior job.
-        self.assertLess(
-            prefix.index("Verify signed provenance for every asset"),
-            prefix.rindex("uses: actions/checkout@"),
-        )
+        verified = job.index("Verify signed provenance for every asset")
+        materialize = job.index("Materialize notes helper from verified source archive")
+        execute = job.index('python3 "${RUNNER_TEMP}/vvp-release-checks.py"')
+        self.assertLess(verified, materialize)
+        self.assertLess(materialize, execute)
+        self.assertNotIn("actions/checkout@", job)
+
+
+@unittest.skipUnless(shutil.which("bash"), "Bash required")
+class PublishHelperMaterializationTests(unittest.TestCase):
+    def test_extracts_only_unique_regular_helper_and_never_clobbers(self):
+        script = publish_script("Materialize notes helper from verified source archive")
+        member_name = "verified-video-pipeline-0.2.0/scripts/release_checks.py"
+        for variant in (
+            "regular",
+            "duplicate",
+            "symlink",
+            "hardlink",
+            "missing",
+            "oversize",
+        ):
+            with (
+                self.subTest(variant=variant),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                (root / "release").mkdir()
+                runner_temp = root / "runner-temp"
+                runner_temp.mkdir()
+                source_path = root / "release/verified-video-pipeline-0.2.0.tar.gz"
+                data = b'print("synthetic helper")\n'
+                with tarfile.open(source_path, "w:gz") as archive:
+                    if variant != "missing":
+                        member = tarfile.TarInfo(member_name)
+                        if variant in {"symlink", "hardlink"}:
+                            member.type = (
+                                tarfile.SYMTYPE
+                                if variant == "symlink"
+                                else tarfile.LNKTYPE
+                            )
+                            member.linkname = "other.py"
+                            archive.addfile(member)
+                        else:
+                            content = (
+                                data
+                                if variant != "oversize"
+                                else b"x" * (1024 * 1024 + 1)
+                            )
+                            member.size = len(content)
+                            archive.addfile(member, io.BytesIO(content))
+                            if variant == "duplicate":
+                                archive.addfile(member, io.BytesIO(content))
+
+                def execute():
+                    return subprocess.run(
+                        ["bash", "-c", script],
+                        cwd=root,
+                        env={
+                            **os.environ,
+                            "RELEASE_VERSION": "0.2.0",
+                            "RUNNER_TEMP": str(runner_temp),
+                        },
+                        capture_output=True,
+                        text=True,
+                        timeout=20,
+                    )
+
+                result = execute()
+                target = runner_temp / "vvp-release-checks.py"
+                if variant == "regular":
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(target.read_bytes(), data)
+                    self.assertNotEqual(execute().returncode, 0)
+                    self.assertEqual(target.read_bytes(), data)
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(target.exists())
 
 
 @unittest.skipUnless(
