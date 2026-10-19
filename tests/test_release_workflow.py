@@ -14,6 +14,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from test_release import (
     ROOT,
@@ -126,7 +127,8 @@ class PublishHelperMaterializationTests(unittest.TestCase):
 class PublishIdentityGateTests(unittest.TestCase):
     def test_real_publish_script_accepts_current_bundle_and_rejects_drift(self):
         script = publish_script("Verify asset set, checksums, and evidence identity")
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
+            os.environ.pop("SOURCE_DATE_EPOCH", None)
             root = Path(directory)
             commit = initialize_tagged_repository(root)
             assets = root / "release"

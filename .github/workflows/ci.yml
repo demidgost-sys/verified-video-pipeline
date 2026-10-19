@@ -66,7 +66,7 @@ jobs:
           ruff format --check src tests scripts
 
       - name: Run test suite
-        run: python -m unittest discover -s tests -v
+        run: SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)" python -m unittest discover -s tests -v
 
       - name: Run standalone synthetic proof
         run: vvp demo "${RUNNER_TEMP}/verified-video-demo"
