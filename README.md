@@ -178,8 +178,10 @@ every reachable historical path and blob plus commit and annotated-tag
 messages, not only the current files, before a release can proceed.
 
 `v0.1.0` is the original GitHub source release and predates automated artifact
-attestations; it remains unchanged and has no signed release assets. Future
-strict `vX.Y.Z` tags use the fail-closed [release process](docs/release-process.md)
+attestations; it remains unchanged and has no signed release assets.
+[v0.2.1](https://github.com/demidgost-sys/verified-video-pipeline/releases/tag/v0.2.1)
+is the first immutable release with externally verified attestations for all four
+published assets. Strict `vX.Y.Z` tags use the fail-closed [release process](docs/release-process.md)
 to build with a hash-locked Ubuntu/Python 3.11 package set, verify the wheel in a
 clean environment, and transfer one immutable artifact to separate attestation
 and publication jobs. The final job rechecks the public immutable-tag ruleset

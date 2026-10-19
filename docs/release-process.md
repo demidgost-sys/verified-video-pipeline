@@ -82,18 +82,18 @@ specific run links, the release run, artifact digests, schema/profile versions
 and known limits. A successful run on another commit or an older green run
 followed by failure cannot satisfy that gate.
 
-## Clean-clone rehearsal checklist
+## Clean-clone rebuild checklist
 
-Use an isolated fresh clone of the reviewed commit. Until the PR is merged,
-this is a rehearsal only and cannot pass the real origin/main ancestry gate.
-After merge, the following commands are the local unsigned rehearsal. They do
-not mint a GitHub attestation and do not push or publish anything:
+The following commands rebuild published v0.2.1 from its existing annotated tag
+in an isolated Linux clone. They produce local unsigned artifacts and do not
+push or publish anything. For a new version, first merge the reviewed source
+commit and follow the maintainer procedure below with an unused tag.
 
 ```bash
 git clone https://github.com/demidgost-sys/verified-video-pipeline.git vvp-release-check
 cd vvp-release-check
 git fetch --tags origin
-git switch --detach origin/main
+git switch --detach refs/tags/v0.2.1
 python3.11 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes --only-binary=:all: -r requirements/release.txt
@@ -105,8 +105,6 @@ ruff format --check src tests scripts
 export SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
 python -m unittest discover -s tests -v
 VVP_MODEL_PROFILE=deep python -m unittest discover -s tests -p test_model.py -v
-# Create only if v0.2.1 does not already exist. Never replace a tag.
-git tag -a v0.2.1 -m 'Release v0.2.1'
 commit=$(git rev-parse HEAD)
 tag_object=$(git rev-parse refs/tags/v0.2.1)
 python scripts/prepare_release.py check --tag v0.2.1 \
@@ -170,8 +168,9 @@ to replace an existing release.
 3. Merge that reviewed commit into `main` and make sure `origin/main` contains
    it.
 4. Confirm the required ruleset and Immutable Releases setting are active.
-5. Create an annotated tag whose name is exactly `vMAJOR.MINOR.PATCH`, for
-   example `git tag -a v0.2.1 -m "Release v0.2.1"`.
+5. Set `tag` to an unused `vMAJOR.MINOR.PATCH` name matching both reviewed
+   package version declarations, then run `git tag -a "$tag" -m "Release $tag"`.
+   Published tags, including `v0.2.1`, must not be recreated.
 6. Push that tag once. Do not move, delete and recreate, or reuse a release tag.
 7. Review the workflow run and the resulting release. A failed or rerun release
    uses a new version and annotated tag rather than overwriting published
@@ -200,7 +199,7 @@ the source is secure or suitable for a particular use.
 
 ## Consumer verification
 
-Start from a fresh clone, download a future release into its own directory, and
+Start from a fresh clone, download the published release into its own directory, and
 first verify the checksums:
 
 ```bash
@@ -256,13 +255,28 @@ and workflow policy separately.
 `v0.1.0` predates this release workflow. It is an intentionally unsigned
 historical source release: it has no GitHub Artifact Attestation and must not be
 retagged, rebuilt, or described as signed. The signed-release contract applies
-only to future versions created after this workflow enters `main`.
+to v0.2.1 and later releases produced by this workflow.
 
 ## Failed v0.2.0 attempt
 
 v0.2.0 permanently identifies commit bcfb286fea0652dc5ff91b0135d179ac56990ca2.
 Its first tag-only run stopped in the build job because two synthetic tests
 inherited the tagged project SOURCE_DATE_EPOCH. No attestation or release was
-created. The tag remains unchanged; release reruns stay forbidden. The v0.2.1
-candidate isolates fixture epochs and runs PR CI and rehearsals with the same
-release environment. Publishing that new version requires owner confirmation.
+created. The tag remains unchanged; release reruns stay forbidden. The fix in
+v0.2.1 isolates fixture epochs and runs PR CI and rehearsals with the same
+release environment.
+
+## Published v0.2.1
+
+Following owner confirmation, [v0.2.1](https://github.com/demidgost-sys/verified-video-pipeline/releases/tag/v0.2.1)
+was published from commit `a2d6d81e076ac8c750bd9ae3e0a11dfd58283cdb`.
+Its annotated tag object is `2ee6b6c8f35ecb0c2e0e84b0b67e1fca16ee2cd8`.
+The [first tag-only run](https://github.com/demidgost-sys/verified-video-pipeline/actions/runs/39333427387)
+completed the build, attestation, and publication jobs successfully.
+
+All four assets were downloaded from the immutable GitHub Release and passed
+external attestation verification against that source commit, tag ref, and
+release workflow with self-hosted runners denied. A fresh Linux clone verified
+the canonical source archive, wheel, evidence, and checksums.
+[Issue #5](https://github.com/demidgost-sys/verified-video-pipeline/issues/5)
+was closed after these checks passed.
