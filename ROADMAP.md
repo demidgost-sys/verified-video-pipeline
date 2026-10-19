@@ -24,14 +24,17 @@ production accounts, content, code, and history remain private.
 - [x] Add measured loudness checks behind a versioned profile.
 - [x] Add a fail-closed attested-artifact workflow and hash-locked release
   checklist for future tags.
-- [ ] Publish the first new release through that workflow; `v0.1.0` intentionally
+- [x] Publish `v0.2.1` through that workflow; `v0.1.0` intentionally
   remains the pre-attestation source release.
 - [x] Evaluate Windows abstractions without weakening POSIX guarantees.
 
 See [v0.2 contracts and limits](docs/v0.2-contract.md). Windows remains
-unsupported. The signed-release implementation and clean-clone rehearsal are
-ready; the publication checkbox requires the future tagged GitHub-hosted run,
-successful external attestation verification and release receipt.
+unsupported. [v0.2.1](https://github.com/demidgost-sys/verified-video-pipeline/releases/tag/v0.2.1)
+was published from `a2d6d81e076ac8c750bd9ae3e0a11dfd58283cdb` by the
+[tagged GitHub-hosted run](https://github.com/demidgost-sys/verified-video-pipeline/actions/runs/39333427387).
+All four downloaded release assets passed external attestation verification
+bound to that commit, tag, and release workflow. A fresh Linux clone also
+verified the canonical source archive, wheel, evidence, and checksums.
 
 ## v0.3 — adapters after evidence
 
