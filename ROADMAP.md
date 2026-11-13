@@ -1,5 +1,9 @@
 # Roadmap
 
+Active development was frozen on 2026-11-13. This roadmap is retained as
+history; v0.3 and v1.0 are deferred until a new explicit owner request.
+See [project status](PROJECT_STATUS.md) and the [portfolio case](docs/portfolio-case-study.md).
+
 The long-term goal is to build a public, clean-room release-assurance reference
 that demonstrates exact-byte provenance, human-gated approvals, invalidation,
 atomic recovery, and project isolation using synthetic fixtures—while all
