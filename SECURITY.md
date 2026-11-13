@@ -2,7 +2,9 @@
 
 ## Supported versions
 
-Until 1.0, only the latest tagged minor release receives security fixes.
+Active development is [frozen](PROJECT_STATUS.md) as of 2026-11-13. The latest
+release, v0.2.1, is retained as an engineering reference with no scheduled
+maintenance or promised security-fix timeline.
 
 ## Reporting a vulnerability
 
@@ -18,9 +20,9 @@ Include:
 - whether artifact integrity, path isolation, locking, recovery, or evidence is
   affected.
 
-You should receive an acknowledgement within seven days. A fix timeline depends
-on severity and reproducibility; no public disclosure date is promised before
-the report is understood and mitigated.
+Reports are reviewed on a best-effort basis. No acknowledgement or fix deadline
+is promised while the project is frozen. Any code change or new release needs
+an explicit owner decision to resume that work.
 
 ## Secret and data policy
 

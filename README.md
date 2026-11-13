@@ -4,6 +4,10 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](pyproject.toml)
 
+**Development frozen as of 2026-11-13.** The code and v0.2.1 release are
+preserved as an engineering reference. Read the
+[portfolio case](docs/portfolio-case-study.md) and [project status](PROJECT_STATUS.md).
+
 A small, offline reference implementation that turns human-approved video
 artifacts into verifiable release evidence—without silently overwriting files,
 skipping gates, or trusting stale state.

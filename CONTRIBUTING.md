@@ -1,6 +1,8 @@
 # Contributing
 
-Small, contract-preserving changes are welcome.
+Active development is [frozen](PROJECT_STATUS.md). Feature and integration
+work requires a new explicit owner request. The instructions below remain
+available for reproduction and any later authorized change.
 
 ## Before opening a pull request
 
